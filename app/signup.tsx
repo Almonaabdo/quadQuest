@@ -9,22 +9,29 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, Touc
 const themeColor = '#20756aff';
 
 export default function SignUp() {
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+
   const handleSignUp = async () => {
     try {
+      if (!email || !password || !name || !confirmPassword) {
+        setError('Please fill in all fields');
+        return;
+      }
       setError('');
       setIsLoading(true);
-      await signUp(email, password, name);
+      await signUp(email, password, name, userName);
       // Supabase might require email confirmation
       router.replace('/(tabs)'); // or show confirmation message
     } catch (err: any) {
@@ -85,6 +92,20 @@ export default function SignUp() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+              />
+            </View>
+
+            {/* Username Input */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="at" size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#999"
+                value={userName}
+                onChangeText={setUserName}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
 
@@ -163,6 +184,8 @@ export default function SignUp() {
               onPress={handleSignUp}
               style={styles.signUpButton}
             />
+
+            <Text style={{ color: 'red', marginBottom: 24, alignSelf: 'center' }}>{error}</Text>
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
