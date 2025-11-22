@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function Home() {
+  
   const [moods] = useState([
     { id: 1, name: 'Alex', mood: '🔥Pumped', icon: 'flame-outline' },
     { id: 2, name: 'Mia', mood: '😴Tired', icon: 'moon-outline' },

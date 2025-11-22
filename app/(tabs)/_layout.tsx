@@ -1,11 +1,11 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import React from 'react';
-import { TouchableOpacity } from 'react-native';
-
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Link, router, Tabs, useSegments } from 'expo-router';
+import React, { useEffect } from 'react';
+import { TouchableOpacity } from 'react-native';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,6 +17,20 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { session, loading } = useAuth();
+  const segments = useSegments();
+  
+  useEffect(() => {
+    if (loading) return;
+
+    const isAuthRoute = segments[0] === 'signin' || segments[0] === 'signup';
+    
+    if (!session && !isAuthRoute) {
+      router.replace('/signin');
+    } else if (session && isAuthRoute) {
+      router.replace('/(tabs)');
+    }
+  }, [session, loading, segments]);
 
   return (
     <Tabs
@@ -67,7 +81,6 @@ export default function TabLayout() {
         }}
       />
 
-
       <Tabs.Screen
         name="profile"
         options={{
@@ -80,7 +93,5 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-
-
   );
 }

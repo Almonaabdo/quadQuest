@@ -1,5 +1,6 @@
 import Button from '@/components/Buttons';
 import { Text, View } from '@/components/Themed';
+import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet } from 'react-native';
@@ -7,6 +8,13 @@ import { Image, StyleSheet } from 'react-native';
 const themeColor = '#20756aff';
 
 export default function Profile() {
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -44,14 +52,17 @@ export default function Profile() {
       <View style={styles.buttonsContainer}>
         <Button title="View Squad" onPress={() => router.replace('/two')} />
 
-
-          <Button
-            title="Settings"
-            type="secondary"
-            onPress={() => router.replace('/two')}
-          />
+        <Button
+          title="Settings"
+          type="secondary"
+          onPress={() => router.replace('/two')}
+        />
       </View>
+
+      <Button title="Sign out" onPress={handleSignOut}></Button>
+
     </View>
+
   );
 }
 
