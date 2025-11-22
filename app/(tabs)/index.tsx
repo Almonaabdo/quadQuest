@@ -23,15 +23,52 @@ export default function Home() {
     avatar: 'https://cdn-icons-png.flaticon.com/512/5556/5556468.png',
   });
 
+  const [goals] = useState([
+    { id: 1, title: '5000 Combined Push-Ups', progress: 3200, target: 5000, color: '#f87171' },
+    { id: 2, title: 'Save $10,000 for Trip', progress: 7500, target: 10000, color: '#34d399' },
+    { id: 3, title: 'Go to the gym 5 times a week', progress: 4, target: 5, color: '#60a5fa' },
+  ]);
+
+  const renderProgressBar = (progress: number, target: number, color: string) => {
+    const percentage = Math.min((progress / target) * 100, 100);
+    return (
+      <View style={styles.progressBarBackground}>
+        <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
+      </View>
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
 
-      {/* Squad Leader Card */}
-      <View style={styles.leaderCard}>
-        <Image source={{ uri: leader.avatar }} style={styles.leaderAvatar} />
-        <Text style={styles.leaderTitle}>Squad Leader</Text>
-        <Text style={styles.leaderName}>{leader.name}</Text>
-        <Text style={styles.leaderXP}>XP: {leader.xp}</Text>
+      {/* Squad Card */}
+      <View style={styles.squadCard}>
+        <Text style={styles.squadName}>🔥 Gigga Ni**ers</Text>
+        <Text style={styles.squadLevel}>Level 12</Text>
+
+        {/* Squad Achievements */}
+        <View style={styles.squadStats}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>3400</Text>
+            <Text>XP</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>78</Text>
+            <Text>Wins</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>12</Text>
+            <Text>Challenges</Text>
+          </View>
+        </View>
+        <Text style={styles.sectionTitle}>Leader</Text>
+        <View style={styles.leaderInfo}>
+          <Image source={{ uri: leader.avatar }} style={styles.leaderAvatarSmall} />
+          <View>
+            <Text>{leader.name}</Text>
+            <Text>{leader.xp} XP</Text>
+          </View>
+        </View>
       </View>
 
       {/* Squad Moods */}
@@ -45,6 +82,16 @@ export default function Home() {
           </View>
         ))}
       </View>
+
+      {/* Squad Goals */}
+      <Text style={styles.sectionTitle}>Squad Goals</Text>
+      {goals.map((g) => (
+        <View key={g.id} style={styles.goalCard}>
+          <Text style={styles.goalTitle}>{g.title}</Text>
+          {renderProgressBar(g.progress, g.target, g.color)}
+          <Text style={styles.goalProgress}>{g.progress} / {g.target}</Text>
+        </View>
+      ))}
 
       {/* Daily Challenges */}
       <Text style={styles.sectionTitle}>Today’s Quests</Text>
@@ -111,7 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   moodContainer: {
-    marginBottom: 10,
+    marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -125,6 +172,31 @@ const styles = StyleSheet.create({
   moodText: {
     opacity: 0.7,
     fontSize: 12,
+  },
+  goalCard: {
+    marginBottom: 15,
+  },
+  goalTitle: {
+    fontWeight: '600',
+    marginBottom: 6,
+    fontSize: 16,
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 12,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 10,
+  },
+  goalProgress: {
+    fontSize: 12,
+    opacity: 0.7,
+    alignSelf: 'flex-end',
   },
   challengeCard: {
     padding: 18,
@@ -146,4 +218,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.6,
   },
+  squadCard: {
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 20,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  squadName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#facc15', 
+    marginBottom: 4,
+  },
+  squadLevel: {
+    fontSize: 16,
+    opacity: 0.7,
+    marginBottom: 15,
+  },
+  squadStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  statBox: {
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 15,
+    width: '30%',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f87171', 
+  },
+  leaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  leaderAvatarSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  
 });
