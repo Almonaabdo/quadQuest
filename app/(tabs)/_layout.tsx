@@ -21,11 +21,11 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        
+
         headerStyle: {
-            backgroundColor: '#20756aff', 
-          },
-          headerTintColor: '#e2dadaff', // sets text & back button color
+          backgroundColor: '#20756aff',
+        },
+        headerTintColor: '#e2dadaff', // sets text & back button color
 
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         // Disable the static render of the header on web
@@ -40,12 +40,12 @@ export default function TabLayout() {
           headerRight: () => (
             <Link href="/modal" asChild>
               <TouchableOpacity>
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15}} 
-                  />
+                <FontAwesome
+                  name="info-circle"
+                  size={25}
+                  color={Colors[colorScheme ?? 'light'].text}
+                  style={{ marginRight: 15 }}
+                />
               </TouchableOpacity>
             </Link>
           ),
@@ -60,12 +60,21 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="fitness"
+        options={{
+          title: 'Fitness',
+          tabBarIcon: ({ color }) => <TabBarIcon name="heart" color={color} />,
+        }}
+      />
+
+
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
           headerStyle: {
-            backgroundColor: '#20756aff', 
+            backgroundColor: '#20756aff',
           },
           headerTintColor: '#e2dadaff', // sets text & back button color
         }}

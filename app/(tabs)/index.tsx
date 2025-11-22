@@ -1,57 +1,68 @@
-import Button from '@/components/Buttons';
 import { ScrollView, Text, View } from '@/components/Themed';
-import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function Home() {
+  const [moods] = useState([
+    { id: 1, name: 'Alex', mood: '🔥Pumped', icon: 'flame-outline' },
+    { id: 2, name: 'Mia', mood: '😴Tired', icon: 'moon-outline' },
+    { id: 3, name: 'Jay', mood: '😎Vibing', icon: 'happy-outline' },
+    { id: 4, name: 'Zara', mood: '💪Focused', icon: 'fitness-outline' }
+  ]);
+
+  const [challenges] = useState([
+    { id: 1, title: '20 Push-Up Challenge', xp: 25, completed: false },
+    { id: 2, title: 'Drink 2L of water', xp: 15, completed: true },
+    { id: 3, title: '10 min Meditation', xp: 20, completed: false }
+  ]);
+
+  const [leader] = useState({
+    name: 'Abdul',
+    xp: 340,
+    avatar: 'https://cdn-icons-png.flaticon.com/512/5556/5556468.png',
+  });
+
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      
-      {/* Greeting */}
-      <View style={styles.section}>
-        <Text style={styles.header}>Good Morning, John!</Text>
+    <ScrollView style={styles.container}>
+
+      {/* Squad Leader Card */}
+      <View style={styles.leaderCard}>
+        <Image source={{ uri: leader.avatar }} style={styles.leaderAvatar} />
+        <Text style={styles.leaderTitle}>Squad Leader</Text>
+        <Text style={styles.leaderName}>{leader.name}</Text>
+        <Text style={styles.leaderXP}>XP: {leader.xp}</Text>
       </View>
 
-      {/* Daily Challenge */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Today's Challenge</Text>
-        <Text style={styles.cardText}>Do 20 push-ups and send a proof picture</Text>
-        <Button title="Mark as Done" onPress={() => console.log('Challenge completed')} />
+      {/* Squad Moods */}
+      <Text style={styles.sectionTitle}>Squad Mood</Text>
+      <View style={styles.moodContainer}>
+        {moods.map((m) => (
+          <View key={m.id} style={styles.moodCard}>
+            <Ionicons name={m.icon as any} size={28} style={styles.moodIcon} />
+            <Text style={styles.moodName}>{m.name}</Text>
+            <Text style={styles.moodText}>{m.mood}</Text>
+          </View>
+        ))}
       </View>
 
-      {/* Squad Status */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Squad Status</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>24</Text>
-            <Text style={styles.statLabel}>Challenges</Text>
+      {/* Daily Challenges */}
+      <Text style={styles.sectionTitle}>Today’s Quests</Text>
+      {challenges.map((c) => (
+        <TouchableOpacity key={c.id}>
+          <View style={styles.challengeCard}>
+            <View>
+              <Text style={styles.challengeTitle}>{c.title}</Text>
+              <Text style={styles.challengeXP}>{c.xp} XP</Text>
+            </View>
+            {c.completed ? (
+              <Ionicons name="checkmark-circle" size={32} color={'green'} />
+            ) : (
+              <Ionicons name="ellipse-outline" size={32} color={'gray'} />
+            )}
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>7</Text>
-            <Text style={styles.statLabel}>Level</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>1.2k</Text>
-            <Text style={styles.statLabel}>XP</Text>
-          </View>
-        </View>
-        <Button title="View Squad" type="secondary" onPress={() => console.log('View squad')} />
-      </View>
-
-      {/* Recent Activity */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Recent Activity</Text>
-        <TouchableOpacity style={styles.activityItem}>
-          <Text style={styles.activityText}>Alice completed 50 push-ups 💪</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.activityItem}>
-          <Text style={styles.activityText}>Bob earned 200 XP for streak!</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.activityItem}>
-          <Text style={styles.activityText}>Squad completed weekly goal 🎯</Text>
-        </TouchableOpacity>
-      </View>
+      ))}
 
     </ScrollView>
   );
@@ -59,64 +70,80 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  section: {
-    width: '90%',
-    marginBottom: 20,
-  },
-  header: {
-    fontSize: 26,
-    fontWeight: 'bold',
-  },
-  card: {
-    width: '90%',
-    borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  leaderCard: {
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
+  leaderAvatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 50,
     marginBottom: 10,
   },
-  cardText: {
-    fontSize: 16,
-    marginBottom: 15,
+  leaderTitle: {
+    fontSize: 22,
+    fontWeight: '700',
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  statBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statNumber: {
+  leaderName: {
     fontSize: 18,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    fontSize: 14,
     marginTop: 4,
   },
-  buttonsContainer: {
+  leaderXP: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  moodCard: {
+    padding: 5,
+    borderRadius: 15,
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  moodContainer: {
+    marginBottom: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
-  activityItem: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  moodIcon: {
+    color: 'darkgreen',
   },
-  activityText: {
+  moodName: {
+    fontWeight: '600',
+  },
+  moodText: {
+    opacity: 0.7,
+    fontSize: 12,
+  },
+  challengeCard: {
+    padding: 18,
+    borderRadius: 15,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  challengeTitle: {
     fontSize: 16,
+    color: '#1e348e',
+    fontWeight: '600',
+  },
+  challengeXP: {
+    fontSize: 12,
+    opacity: 0.6,
   },
 });
