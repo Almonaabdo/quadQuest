@@ -19,12 +19,12 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { session, loading } = useAuth();
   const segments = useSegments();
-  
+
   useEffect(() => {
     if (loading) return;
 
     const isAuthRoute = segments[0] === 'signin' || segments[0] === 'signup';
-    
+
     if (!session && !isAuthRoute) {
       router.replace('/signin');
     } else if (session && isAuthRoute) {
@@ -37,7 +37,7 @@ export default function TabLayout() {
       screenOptions={{
 
         headerStyle: {
-          backgroundColor: '#20756aff',
+          backgroundColor: '#0f172a',
         },
         headerTintColor: '#e2dadaff', // sets text & back button color
 
@@ -86,10 +86,6 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          headerStyle: {
-            backgroundColor: '#20756aff',
-          },
-          headerTintColor: '#e2dadaff', // sets text & back button color
         }}
       />
     </Tabs>

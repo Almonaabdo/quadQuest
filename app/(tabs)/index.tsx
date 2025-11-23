@@ -1,21 +1,22 @@
-import { ScrollView, Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
-  
+
   const [moods] = useState([
-    { id: 1, name: 'Alex', mood: '🔥Pumped', icon: 'flame-outline' },
-    { id: 2, name: 'Mia', mood: '😴Tired', icon: 'moon-outline' },
-    { id: 3, name: 'Jay', mood: '😎Vibing', icon: 'happy-outline' },
-    { id: 4, name: 'Zara', mood: '💪Focused', icon: 'fitness-outline' }
+    { id: 1, name: 'Alex', mood: '🔥Pumped', icon: 'flame', color: '#f472b6' },
+    { id: 2, name: 'Mia', mood: '😴Tired', icon: 'moon', color: '#94a3b8' },
+    { id: 3, name: 'Jay', mood: '😎Vibing', icon: 'happy', color: '#fbbf24' },
+    { id: 4, name: 'Zara', mood: '💪Focused', icon: 'fitness', color: '#22d3ee' }
   ]);
 
   const [challenges] = useState([
-    { id: 1, title: '20 Push-Up Challenge', xp: 25, completed: false },
-    { id: 2, title: 'Drink 2L of water', xp: 15, completed: true },
-    { id: 3, title: '10 min Meditation', xp: 20, completed: false }
+    { id: 1, title: '20 Push-Up Challenge', xp: 25, completed: false, category: 'Fitness' },
+    { id: 2, title: 'Drink 2L of water', xp: 15, completed: true, category: 'Health' },
+    { id: 3, title: '10 min Meditation', xp: 20, completed: false, category: 'Mind' }
   ]);
 
   const [leader] = useState({
@@ -25,7 +26,7 @@ export default function Home() {
   });
 
   const [goals] = useState([
-    { id: 1, title: '5000 Combined Push-Ups', progress: 3200, target: 5000, color: '#f87171' },
+    { id: 1, title: '5000 Combined Push-Ups', progress: 3200, target: 5000, color: '#f472b6' },
     { id: 2, title: 'Save $10,000 for Trip', progress: 7500, target: 10000, color: '#34d399' },
     { id: 3, title: 'Go to the gym 5 times a week', progress: 4, target: 5, color: '#60a5fa' },
   ]);
@@ -34,235 +35,339 @@ export default function Home() {
     const percentage = Math.min((progress / target) * 100, 100);
     return (
       <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
+        <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 8 }]} />
       </View>
     );
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
 
-      {/* Squad Card */}
-      <View style={styles.squadCard}>
-        <Text style={styles.squadName}>🔥 Gigga Ni**ers</Text>
-        <Text style={styles.squadLevel}>Level 12</Text>
-
-        {/* Squad Achievements */}
-        <View style={styles.squadStats}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>3400</Text>
-            <Text>XP</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>78</Text>
-            <Text>Wins</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>12</Text>
-            <Text>Challenges</Text>
-          </View>
-        </View>
-        <Text style={styles.sectionTitle}>Leader</Text>
-        <View style={styles.leaderInfo}>
-          <Image source={{ uri: leader.avatar }} style={styles.leaderAvatarSmall} />
+        {/* Header */}
+        <View style={styles.header}>
           <View>
-            <Text>{leader.name}</Text>
-            <Text>{leader.xp} XP</Text>
+            <Text style={styles.greeting}>Welcome back,</Text>
+            <Text style={styles.username}>{leader.name}</Text>
           </View>
+          <Image source={{ uri: leader.avatar }} style={styles.headerAvatar} />
         </View>
-      </View>
 
-      {/* Squad Moods */}
-      <Text style={styles.sectionTitle}>Squad Mood</Text>
-      <View style={styles.moodContainer}>
-        {moods.map((m) => (
-          <View key={m.id} style={styles.moodCard}>
-            <Ionicons name={m.icon as any} size={28} style={styles.moodIcon} />
-            <Text style={styles.moodName}>{m.name}</Text>
-            <Text style={styles.moodText}>{m.mood}</Text>
+        {/* Squad Card */}
+        <LinearGradient
+          colors={['#4c1d95', '#2e1065']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.squadCard}
+        >
+          <View style={styles.squadHeader}>
+            <View>
+              <Text style={styles.squadName}>🔥 Gigga Ni**ers</Text>
+              <Text style={styles.squadLevel}>Level 12 Squad</Text>
+            </View>
+            <View style={styles.rankBadge}>
+              <Text style={styles.rankText}>#1</Text>
+            </View>
+          </View>
+
+          <View style={styles.squadStats}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>3.4k</Text>
+              <Text style={styles.statLabel}>Total XP</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>78</Text>
+              <Text style={styles.statLabel}>Wins</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statLabel}>Active</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Squad Moods */}
+        <Text style={styles.sectionTitle}>Squad Vibe</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
+          {moods.map((m) => (
+            <View key={m.id} style={[styles.moodCard, { borderColor: m.color }]}>
+              <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
+                <Ionicons name={m.icon as any} size={24} color={m.color} />
+              </View>
+              <Text style={styles.moodName}>{m.name}</Text>
+              <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Squad Goals */}
+        <Text style={styles.sectionTitle}>Squad Goals</Text>
+        {goals.map((g) => (
+          <View key={g.id} style={styles.goalCard}>
+            <View style={styles.goalHeader}>
+              <Text style={styles.goalTitle}>{g.title}</Text>
+              <Text style={styles.goalProgressText}>{Math.round((g.progress / g.target) * 100)}%</Text>
+            </View>
+            {renderProgressBar(g.progress, g.target, g.color)}
+            <Text style={styles.goalStats}>{g.progress} / {g.target}</Text>
           </View>
         ))}
-      </View>
 
-      {/* Squad Goals */}
-      <Text style={styles.sectionTitle}>Squad Goals</Text>
-      {goals.map((g) => (
-        <View key={g.id} style={styles.goalCard}>
-          <Text style={styles.goalTitle}>{g.title}</Text>
-          {renderProgressBar(g.progress, g.target, g.color)}
-          <Text style={styles.goalProgress}>{g.progress} / {g.target}</Text>
-        </View>
-      ))}
+        {/* Daily Challenges */}
+        <Text style={styles.sectionTitle}>Today’s Quests</Text>
+        {challenges.map((c) => (
+          <TouchableOpacity key={c.id} activeOpacity={0.7}>
+            <LinearGradient
+              colors={['#1e293b', '#0f172a']}
+              style={styles.challengeCard}
+            >
+              <View style={styles.challengeIcon}>
+                <Ionicons name={c.category === 'Fitness' ? 'fitness' : c.category === 'Health' ? 'water' : 'leaf'} size={24} color="#fff" />
+              </View>
+              <View style={styles.challengeContent}>
+                <Text style={styles.challengeTitle}>{c.title}</Text>
+                <Text style={styles.challengeXP}>+{c.xp} XP</Text>
+              </View>
+              {c.completed ? (
+                <View style={styles.completedBadge}>
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                </View>
+              ) : (
+                <View style={styles.incompleteBadge} />
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        ))}
 
-      {/* Daily Challenges */}
-      <Text style={styles.sectionTitle}>Today’s Quests</Text>
-      {challenges.map((c) => (
-        <TouchableOpacity key={c.id}>
-          <View style={styles.challengeCard}>
-            <View>
-              <Text style={styles.challengeTitle}>{c.title}</Text>
-              <Text style={styles.challengeXP}>{c.xp} XP</Text>
-            </View>
-            {c.completed ? (
-              <Ionicons name="checkmark-circle" size={32} color={'green'} />
-            ) : (
-              <Ionicons name="ellipse-outline" size={32} color={'gray'} />
-            )}
-          </View>
-        </TouchableOpacity>
-      ))}
-
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+  },
   container: {
+    flex: 1,
+  },
+  contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
-  leaderCard: {
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-  },
-  leaderAvatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 50,
-    marginBottom: 10,
-  },
-  leaderTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  leaderName: {
-    fontSize: 18,
-    marginTop: 4,
-  },
-  leaderXP: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  moodCard: {
-    padding: 5,
-    borderRadius: 15,
-    marginRight: 12,
-    alignItems: 'center',
-  },
-  moodContainer: {
-    marginBottom: 20,
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  moodIcon: {
-    color: 'darkgreen',
-  },
-  moodName: {
-    fontWeight: '600',
-  },
-  moodText: {
-    opacity: 0.7,
-    fontSize: 12,
-  },
-  goalCard: {
-    marginBottom: 15,
-  },
-  goalTitle: {
-    fontWeight: '600',
-    marginBottom: 6,
-    fontSize: 16,
-  },
-  progressBarBackground: {
-    width: '100%',
-    height: 12,
-    borderRadius: 10,
-    backgroundColor: '#e5e7eb',
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 10,
-  },
-  goalProgress: {
-    fontSize: 12,
-    opacity: 0.7,
-    alignSelf: 'flex-end',
-  },
-  challengeCard: {
-    padding: 18,
-    borderRadius: 15,
-    marginBottom: 12,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    marginBottom: 24,
   },
-  challengeTitle: {
+  greeting: {
     fontSize: 16,
-    color: '#1e348e',
-    fontWeight: '600',
+    color: '#94a3b8',
+    fontFamily: 'System',
   },
-  challengeXP: {
-    fontSize: 12,
-    opacity: 0.6,
+  username: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    fontFamily: 'System',
+  },
+  headerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#8b5cf6',
   },
   squadCard: {
-    padding: 20,
-    borderRadius: 20,
+    padding: 24,
+    borderRadius: 24,
+    marginBottom: 32,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  squadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 20,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
   },
   squadName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#facc15', 
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
     marginBottom: 4,
   },
   squadLevel: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 15,
+    fontSize: 14,
+    color: '#c4b5fd',
+    fontWeight: '600',
+  },
+  rankBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  rankText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   squadStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 16,
+    padding: 16,
   },
   statBox: {
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 15,
-    width: '30%',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   statNumber: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#f87171', 
+    color: '#fff',
+    marginBottom: 2,
   },
-  leaderInfo: {
+  statLabel: {
+    fontSize: 12,
+    color: '#c4b5fd',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  moodScroll: {
+    marginBottom: 32,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  moodCard: {
+    padding: 16,
+    borderRadius: 20,
+    marginRight: 12,
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    width: 100,
+  },
+  moodIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  moodName: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  moodText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  goalCard: {
+    backgroundColor: '#1e293b',
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  goalTitle: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  goalProgressText: {
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#334155',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  goalStats: {
+    color: '#64748b',
+    fontSize: 12,
+    alignSelf: 'flex-end',
+  },
+  challengeCard: {
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  leaderAvatarSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
+  challengeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#334155',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  
+  challengeContent: {
+    flex: 1,
+  },
+  challengeTitle: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  challengeXP: {
+    fontSize: 14,
+    color: '#f472b6',
+    fontWeight: '600',
+  },
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#22c55e',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  incompleteBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#475569',
+  },
 });
