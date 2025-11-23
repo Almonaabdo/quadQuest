@@ -1,8 +1,10 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { sendLocalNotification } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +45,12 @@ export default function Profile() {
   const { signOut, user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      sendLocalNotification('Welcome to profile', 'You are now viewing your profile.');
+    }, [])
+  );
 
   const handleSignOut = async () => {
     await signOut();
@@ -205,7 +213,7 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
+    paddingTop: -50,
     backgroundColor: COLORS.dark,
   },
   container: {
@@ -213,7 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: '15%',
   },
   headerActions: {
     flexDirection: 'row',

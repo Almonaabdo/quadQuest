@@ -1,3 +1,4 @@
+// Home Screen
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -22,7 +23,7 @@ export default function Home() {
   const [leader] = useState({
     name: 'Abdul',
     xp: 340,
-    avatar: 'https://cdn-icons-png.flaticon.com/512/5556/5556468.png',
+    avatar: 'https://i.redd.it/l7luysouw2z41.jpg',
   });
 
   const [goals] = useState([
@@ -47,7 +48,7 @@ export default function Home() {
 
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerText}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.username}>{leader.name}</Text>
           </View>
@@ -55,12 +56,7 @@ export default function Home() {
         </View>
 
         {/* Squad Card */}
-        <LinearGradient
-          colors={['#4c1d95', '#2e1065']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.squadCard}
-        >
+        <LinearGradient colors={['#4c1d95', '#2e1065']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.squadCard}>
           <View style={styles.squadHeader}>
             <View>
               <Text style={styles.squadName}>🔥 Gigga Ni**ers</Text>
@@ -150,14 +146,15 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: -50,
     backgroundColor: '#0f172a',
   },
   container: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 15,
+    paddingBottom: '25%',
   },
   header: {
     flexDirection: 'row',
@@ -168,6 +165,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 16,
     color: '#94a3b8',
+    marginTop: -5,
     fontFamily: 'System',
   },
   username: {
@@ -176,9 +174,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'System',
   },
+  headerText: {
+    gap: 8,
+  },
   headerAvatar: {
-    width: 50,
-    height: 50,
+    width: 70,
+    height: 70,
     borderRadius: 25,
     borderWidth: 2,
     borderColor: '#8b5cf6',
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   moodCard: {
-    padding: 16,
+    padding: 8,
     borderRadius: 20,
     marginRight: 12,
     alignItems: 'center',
