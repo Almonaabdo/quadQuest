@@ -1,6 +1,8 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,114 +20,8 @@ const COLORS = {
 const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 };
 const RADIUS = { sm: 12, md: 16, lg: 20, xl: 22, full: 999 };
 
-const squadMembers = [
-  { id: '1', name: 'Nia', initials: 'N', color: '#60a5fa', progress: 92, streak: 12 },
-  { id: '2', name: 'Rey', initials: 'R', color: '#34d399', progress: 84, streak: 8 },
-  { id: '3', name: 'Amir', initials: 'A', color: '#f97316', progress: 71, streak: 5 },
-  { id: '4', name: 'Dee', initials: 'D', color: '#f472b6', progress: 63, streak: 3 },
-];
-
-const currentChallenges = [
-  {
-    id: '1',
-    title: 'Mobility Relay',
-    description: 'Hold a deep squat for 90s, pass the turn to the next friend.',
-    owner: 'Nia',
-    due: 'Resets in 12h',
-    progress: 82,
-    focus: ['Mobility', 'Core', 'Mindful breath'],
-    participants: 4,
-    joined: true,
-  },
-  {
-    id: '2',
-    title: 'Pulse Push Dash',
-    description: 'Max push-ups in 90s and upload a proof clip.',
-    owner: 'Rey',
-    due: 'Streak day 4',
-    progress: 57,
-    focus: ['Upper body', 'Power'],
-    participants: 3,
-    joined: true,
-  },
-  {
-    id: '3',
-    title: 'Basement Burner',
-    description: '6 rounds: 10 burpees + 10 hollow rocks.',
-    owner: 'Amir',
-    due: 'Tonight 9 PM',
-    progress: 41,
-    focus: ['HIIT', 'Core'],
-    participants: 2,
-    joined: false,
-  },
-];
-
-const futureChallenges = [
-  {
-    id: '1',
-    title: 'Sunrise Core Layers',
-    start: 'Tomorrow • 06:00',
-    summary: '3 rounds of hollow holds + V-ups relay.',
-    reward: '+300 XP',
-    color: '#fde68a',
-    joined: false,
-  },
-  {
-    id: '2',
-    title: 'Steps & Sprints',
-    start: 'Thu • 18:30',
-    summary: 'Outdoor stair sprints, film hand-off.',
-    reward: '+260 XP',
-    color: '#c7d2fe',
-    joined: true,
-  },
-  {
-    id: '3',
-    title: 'Ice Bath Pact',
-    start: 'Sat • 09:00',
-    summary: '3 min cold exposure, share reflections.',
-    reward: '+400 XP',
-    color: '#bfdbfe',
-    joined: false,
-  },
-];
-
-const completedChallenges = [
-  {
-    id: '1',
-    title: 'Aura Dash',
-    summary: '800m intervals • synced effort',
-    xp: '+420 XP',
-    mood: 'Squad fueled',
-    date: '2 days ago',
-  },
-  {
-    id: '2',
-    title: 'Grip Gambit',
-    summary: 'Dead hangs ladder • all four cleared',
-    xp: '+250 XP',
-    mood: 'Forearms lit',
-    date: '1 day ago',
-  },
-  {
-    id: '3',
-    title: 'Tempo Tempo',
-    summary: 'Metronome planks • 6 min average hold',
-    xp: '+310 XP',
-    mood: 'Locked core',
-    date: '12h ago',
-  },
-];
-
-const feedUpdates = [
-  { id: '1', author: 'Amir', message: 'Uploaded proof for Pulse Push Dash.', time: '2m ago', vibe: '🔥' },
-  { id: '2', author: 'Dee', message: 'Left feedback + tips on breathing cadence.', time: '18m ago', vibe: '💬' },
-  { id: '3', author: 'Nia', message: 'Scheduled Sunrise Core Layers & invited squad.', time: '1h ago', vibe: '📅' },
-  { id: '4', author: 'Rey', message: 'Completed ice shower, bonus 50 XP claimed.', time: '3h ago', vibe: '❄️' },
-];
-
 export default function Fitness() {
+  const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     current: true,
@@ -133,13 +29,64 @@ export default function Fitness() {
     completed: false,
     feed: true,
   });
-  const [joinedChallenges, setJoinedChallenges] = useState<Set<string>>(
-    new Set(currentChallenges.filter(c => c.joined).map(c => c.id))
-  );
+
+  const [squadMembers, setSquadMembers] = useState<any[]>([]);
+  const [currentChallenges, setCurrentChallenges] = useState<any[]>([]);
+  const [completedChallenges, setCompletedChallenges] = useState<any[]>([]);
+  const [joinedChallenges, setJoinedChallenges] = useState<Set<string>>(new Set());
+
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      // Fetch Squad Members
+      const { data: memberData } = await supabase
+        .from('squad_members')
+        .select('squad_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (memberData) {
+        const { data: squadMembersData } = await supabase
+          .from('squad_members')
+          .select('user_id, profiles(username, avatar_url, xp)')
+          .eq('squad_id', memberData.squad_id);
+
+        const formattedMembers = squadMembersData?.map((m: any) => ({
+          id: m.user_id,
+          name: m.profiles?.username || 'Member',
+          initials: (m.profiles?.username || 'M')[0].toUpperCase(),
+          color: '#60a5fa', // Placeholder color
+          progress: Math.floor(Math.random() * 100), // Placeholder progress
+          streak: Math.floor(Math.random() * 20), // Placeholder streak
+        })) || [];
+        setSquadMembers(formattedMembers);
+
+        // Fetch Challenges
+        const { data: challengesData } = await supabase
+          .from('challenges')
+          .select('*')
+          .eq('user_id', user.id); // Ideally fetch squad challenges, but for now user challenges
+
+        if (challengesData) {
+          setCurrentChallenges(challengesData.filter((c: any) => !c.completed));
+          setCompletedChallenges(challengesData.filter((c: any) => c.completed));
+          setJoinedChallenges(new Set(challengesData.map((c: any) => c.id)));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fitness data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
+    fetchData();
   }, []);
 
   const toggleSection = (section: string) => {
@@ -167,7 +114,7 @@ export default function Fitness() {
     ]);
   };
 
-  const handleMemberPress = (member: typeof squadMembers[0]) => {
+  const handleMemberPress = (member: any) => {
     Alert.alert(member.name, `${member.streak} day streak • ${member.progress}% progress`);
   };
 
@@ -235,90 +182,51 @@ export default function Fitness() {
           </TouchableOpacity>
           {expandedSections.current && (
             <>
-              {currentChallenges.map((challenge) => (
-                <TouchableOpacity
-                  key={challenge.id}
-                  style={[styles.divider, { paddingVertical: SPACING.md, gap: SPACING.sm }]}
-                  activeOpacity={0.7}
-                  onPress={() => Alert.alert(challenge.title, challenge.description)}
-                >
-                  <View style={styles.rowBetween}>
-                    <View style={[styles.row, { gap: SPACING.sm, alignItems: 'center', flex: 1 }]}>
-                      <Text style={[styles.text, { fontSize: 16, fontWeight: '600', color: '#fff' }]}>{challenge.title}</Text>
+              {currentChallenges.length > 0 ? (
+                currentChallenges.map((challenge) => (
+                  <TouchableOpacity
+                    key={challenge.id}
+                    style={[styles.divider, { paddingVertical: SPACING.md, gap: SPACING.sm }]}
+                    activeOpacity={0.7}
+                    onPress={() => Alert.alert(challenge.title, challenge.description || 'No description')}
+                  >
+                    <View style={styles.rowBetween}>
+                      <View style={[styles.row, { gap: SPACING.sm, alignItems: 'center', flex: 1 }]}>
+                        <Text style={[styles.text, { fontSize: 16, fontWeight: '600', color: '#fff' }]}>{challenge.title}</Text>
+                        {joinedChallenges.has(challenge.id) && (
+                          <View style={[styles.badge, { backgroundColor: COLORS.success + '20', paddingHorizontal: SPACING.sm, paddingVertical: 2 }]}>
+                            <Text style={[styles.textSmall, { color: COLORS.success, fontWeight: '600' }]}>✓ Joined</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.value, { fontSize: 14, color: COLORS.muted }]}>{challenge.xp} XP</Text>
+                    </View>
+                    <Text style={[styles.text, { fontSize: 14, color: COLORS.muted, lineHeight: 20 }]}>{challenge.category || 'General'}</Text>
+                    <View style={[styles.row, { gap: SPACING.sm, marginTop: SPACING.xs }]}>
+                      <TouchableOpacity
+                        style={[styles.badge, { backgroundColor: COLORS.border, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}
+                        onPress={() => handleJoinChallenge(challenge.id, challenge.title)}
+                      >
+                        <Text style={[styles.textSmall, { fontWeight: '600', color: '#fff' }]}>
+                          {joinedChallenges.has(challenge.id) ? 'Leave' : 'Join'}
+                        </Text>
+                      </TouchableOpacity>
                       {joinedChallenges.has(challenge.id) && (
-                        <View style={[styles.badge, { backgroundColor: COLORS.success + '20', paddingHorizontal: SPACING.sm, paddingVertical: 2 }]}>
-                          <Text style={[styles.textSmall, { color: COLORS.success, fontWeight: '600' }]}>✓ Joined</Text>
-                        </View>
+                        <TouchableOpacity
+                          style={[styles.badge, { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}
+                          onPress={() => handleUploadProof(challenge.title)}
+                        >
+                          <Text style={[styles.textSmall, { color: COLORS.light, fontWeight: '600' }]}>Upload Proof</Text>
+                        </TouchableOpacity>
                       )}
                     </View>
-                    <Text style={[styles.value, { fontSize: 14, color: COLORS.muted }]}>{challenge.progress}% sync</Text>
-                  </View>
-                  <Text style={[styles.text, { fontSize: 14, color: COLORS.muted, lineHeight: 20 }]}>{challenge.description}</Text>
-                  <View style={styles.rowBetween}>
-                    <View style={[styles.row, { gap: SPACING.md, alignItems: 'center' }]}>
-                      <Text style={[styles.text, { fontWeight: '500', color: COLORS.muted }]}>Lead: {challenge.owner}</Text>
-                      <Text style={[styles.textSmall, { color: COLORS.muted }]}>👥 {challenge.participants}</Text>
-                    </View>
-                    <Text style={[styles.text, { color: COLORS.primary, fontWeight: '600' }]}>{challenge.due}</Text>
-                  </View>
-                  <View style={[styles.row, { flexWrap: 'wrap', gap: SPACING.sm }]}>
-                    {challenge.focus.map((item) => (
-                      <View key={item} style={[styles.badge, { backgroundColor: '#334155', paddingVertical: SPACING.xs + 2 }]}>
-                        <Text style={[styles.textSmall, { color: '#cbd5e1', fontWeight: '600' }]}>{item}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={[styles.row, { gap: SPACING.sm, marginTop: SPACING.xs }]}>
-                    <TouchableOpacity
-                      style={[styles.badge, { backgroundColor: COLORS.border, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}
-                      onPress={() => handleJoinChallenge(challenge.id, challenge.title)}
-                    >
-                      <Text style={[styles.textSmall, { fontWeight: '600', color: '#fff' }]}>
-                        {joinedChallenges.has(challenge.id) ? 'Leave' : 'Join'}
-                      </Text>
-                    </TouchableOpacity>
-                    {joinedChallenges.has(challenge.id) && (
-                      <TouchableOpacity
-                        style={[styles.badge, { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}
-                        onPress={() => handleUploadProof(challenge.title)}
-                      >
-                        <Text style={[styles.textSmall, { color: COLORS.light, fontWeight: '600' }]}>Upload Proof</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: COLORS.muted, textAlign: 'center', marginTop: 10 }}>No current challenges.</Text>
+              )}
             </>
           )}
-        </View>
-
-        <View style={[styles.card, { paddingBottom: SPACING.md + 2 }]}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.title}>Future line-up</Text>
-            <TouchableOpacity onPress={() => Alert.alert('New Challenge', 'Create a new challenge for your squad!')}>
-              <Text style={[styles.text, { color: COLORS.primary, fontWeight: '600' }]}>+ New</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.md, paddingVertical: SPACING.md + 2 }}>
-            {futureChallenges.map((challenge) => (
-              <TouchableOpacity
-                key={challenge.id}
-                style={[styles.card, { width: 200, backgroundColor: challenge.color, padding: SPACING.lg, gap: SPACING.md + 2 }]}
-                activeOpacity={0.8}
-                onPress={() => handleJoinChallenge(challenge.id, challenge.title)}
-              >
-                <View style={styles.rowBetween}>
-                  <Text style={[styles.textSmall, { color: '#1f2937', fontWeight: '600', textTransform: 'uppercase' }]}>{challenge.start}</Text>
-                  {joinedChallenges.has(challenge.id) && <Text style={[styles.value, { fontSize: 14, color: COLORS.success }]}>✓</Text>}
-                </View>
-                <Text style={[styles.title, { fontSize: 18, color: COLORS.dark }]}>{challenge.title}</Text>
-                <Text style={[styles.text, { color: '#1f2937', lineHeight: 18, fontSize: 13 }]}>{challenge.summary}</Text>
-                <View style={[styles.badge, { backgroundColor: COLORS.dark, alignSelf: 'flex-start' }]}>
-                  <Text style={[styles.textSmall, { color: COLORS.light, fontWeight: '600' }]}>{challenge.reward}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         </View>
 
         <View style={styles.card}>
@@ -331,59 +239,25 @@ export default function Fitness() {
           </TouchableOpacity>
           {expandedSections.completed && (
             <>
-              {completedChallenges.map((item) => (
-                <TouchableOpacity key={item.id} style={[styles.rowBetween, styles.divider, { paddingVertical: SPACING.md, alignItems: 'flex-start' }]} activeOpacity={0.7}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.text, { fontSize: 16, fontWeight: '600', color: '#fff' }]}>{item.title}</Text>
-                    <Text style={[styles.text, { fontSize: 14, color: COLORS.muted, marginTop: SPACING.xs }]}>{item.summary}</Text>
-                    <Text style={[styles.textSmall, { marginTop: SPACING.xs, color: COLORS.muted }]}>{item.date}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.value, { fontSize: 16, color: COLORS.accent }]}>{item.xp}</Text>
-                    <Text style={[styles.textSmall, { marginTop: SPACING.xs, color: COLORS.muted }]}>{item.mood}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {completedChallenges.length > 0 ? (
+                completedChallenges.map((item) => (
+                  <TouchableOpacity key={item.id} style={[styles.rowBetween, styles.divider, { paddingVertical: SPACING.md, alignItems: 'flex-start' }]} activeOpacity={0.7}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.text, { fontSize: 16, fontWeight: '600', color: '#fff' }]}>{item.title}</Text>
+                      <Text style={[styles.text, { fontSize: 14, color: COLORS.muted, marginTop: SPACING.xs }]}>{item.category}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.value, { fontSize: 16, color: COLORS.accent }]}>+{item.xp} XP</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: COLORS.muted, textAlign: 'center', marginTop: 10 }}>No completed challenges yet.</Text>
+              )}
             </>
           )}
         </View>
 
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.rowBetween} onPress={() => toggleSection('feed')} activeOpacity={0.7}>
-            <Text style={styles.title}>Shared pulse</Text>
-            <View style={[styles.row, { gap: SPACING.sm, alignItems: 'center' }]}>
-              <TouchableOpacity onPress={() => Alert.alert('Thread', 'Opening full thread...')}>
-                <Text style={[styles.text, { color: COLORS.primary, fontWeight: '600' }]}>Open thread</Text>
-              </TouchableOpacity>
-              <Ionicons name={expandedSections.feed ? 'chevron-down' : 'chevron-forward'} size={16} color={COLORS.muted} />
-            </View>
-          </TouchableOpacity>
-          {expandedSections.feed && (
-            <>
-              {feedUpdates.map((update) => (
-                <TouchableOpacity
-                  key={update.id}
-                  style={[styles.rowBetween, styles.divider, { paddingVertical: SPACING.md }]}
-                  activeOpacity={0.7}
-                  onPress={() => Alert.alert(update.author, update.message)}
-                >
-                  <View style={[styles.row, { gap: SPACING.md, alignItems: 'center', flex: 1 }]}>
-                    <View style={[styles.avatar, { width: 42, height: 42, borderRadius: RADIUS.sm + 2, backgroundColor: '#312e81' }]}>
-                      <Text style={[styles.value, { fontSize: 16, color: '#e0e7ff' }]}>{update.author[0]}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.text, { color: '#e2e8f0' }]}>
-                        <Text style={{ fontWeight: '700', color: '#fff' }}>{update.author}</Text> {update.message}
-                      </Text>
-                      <Text style={[styles.textSmall, { marginTop: 2, color: COLORS.muted }]}>{update.time}</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 20 }}>{update.vibe}</Text>
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

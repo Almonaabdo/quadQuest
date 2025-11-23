@@ -1,36 +1,107 @@
-// Home Screen
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [moods] = useState([
-    { id: 1, name: 'Alex', mood: '🔥Pumped', icon: 'flame', color: '#f472b6' },
-    { id: 2, name: 'Mia', mood: '😴Tired', icon: 'moon', color: '#94a3b8' },
-    { id: 3, name: 'Jay', mood: '😎Vibing', icon: 'happy', color: '#fbbf24' },
-    { id: 4, name: 'Zara', mood: '💪Focused', icon: 'fitness', color: '#22d3ee' }
-  ]);
+  const [focusedMemberId, setFocusedMemberId] = useState<number | null>(null);
 
-  const [challenges] = useState([
-    { id: 1, title: '20 Push-Up Challenge', xp: 25, completed: false, category: 'Fitness' },
-    { id: 2, title: 'Drink 2L of water', xp: 15, completed: true, category: 'Health' },
-    { id: 3, title: '10 min Meditation', xp: 20, completed: false, category: 'Mind' }
-  ]);
+  const [moods, setMoods] = useState<any[]>([]);
+  const [challenges, setChallenges] = useState<any[]>([]);
+  const [leader, setLeader] = useState<any>(null);
+  const [goals, setGoals] = useState<any[]>([]);
+  const [squad, setSquad] = useState<any>(null);
 
-  const [leader] = useState({
-    name: 'Abdul',
-    xp: 340,
-    avatar: 'https://i.redd.it/l7luysouw2z41.jpg',
-  });
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      // Fetch Profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-  const [goals] = useState([
-    { id: 1, title: '5000 Combined Push-Ups', progress: 3200, target: 5000, color: '#f472b6' },
-    { id: 2, title: 'Save $10,000 for Trip', progress: 7500, target: 10000, color: '#34d399' },
-    { id: 3, title: 'Go to the gym 5 times a week', progress: 4, target: 5, color: '#60a5fa' },
-  ]);
+      if (profileError) throw profileError;
+      setLeader({
+        name: profileData.username || profileData.full_name || 'User',
+        xp: profileData.xp || 0,
+        avatar: profileData.avatar_url || 'https://i.redd.it/l7luysouw2z41.jpg',
+      });
+
+      // Fetch Squad & Goals
+      const { data: memberData } = await supabase
+        .from('squad_members')
+        .select('squad_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (memberData) {
+        const { data: squadData } = await supabase
+          .from('squads')
+          .select('*')
+          .eq('id', memberData.squad_id)
+          .single();
+        setSquad(squadData);
+
+        const { data: goalsData } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('squad_id', memberData.squad_id);
+        setGoals(goalsData || []);
+
+        // Fetch Moods
+        const { data: moodsData } = await supabase
+          .from('moods')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        const formattedMoods = moodsData?.map((m: any) => ({
+          id: m.id,
+          name: 'Member', // Placeholder
+          mood: m.mood,
+          icon: m.icon,
+          color: m.color
+        })) || [];
+        setMoods(formattedMoods);
+      }
+
+      // Fetch Challenges
+      const { data: challengesData } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('user_id', user.id);
+      setChallenges(challengesData || []);
+
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
+  const handlePoke = (name: string) => {
+    Alert.alert('Poke!', `You poked ${name}!`);
+    setFocusedMemberId(null);
+  };
 
   const renderProgressBar = (progress: number, target: number, color: string) => {
     const percentage = Math.min((progress / target) * 100, 100);
@@ -44,58 +115,84 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+      >
 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.username}>{leader.name}</Text>
+            <Text style={styles.username}>{leader?.name || 'Loading...'}</Text>
           </View>
-          <Image source={{ uri: leader.avatar }} style={styles.headerAvatar} />
+          <Image source={{ uri: leader?.avatar || 'https://i.redd.it/l7luysouw2z41.jpg' }} style={styles.headerAvatar} />
         </View>
 
         {/* Squad Card */}
-        <LinearGradient colors={['#4c1d95', '#2e1065']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.squadCard}>
-          <View style={styles.squadHeader}>
-            <View>
-              <Text style={styles.squadName}>🔥 Gigga Ni**ers</Text>
-              <Text style={styles.squadLevel}>Level 12 Squad</Text>
+        {squad ? (
+          <LinearGradient colors={['#4c1d95', '#2e1065']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.squadCard}>
+            <View style={styles.squadHeader}>
+              <View>
+                <Text style={styles.squadName}>{squad.name}</Text>
+                <Text style={styles.squadLevel}>Level {squad.level} Squad</Text>
+              </View>
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>#{squad.rank}</Text>
+              </View>
             </View>
-            <View style={styles.rankBadge}>
-              <Text style={styles.rankText}>#1</Text>
-            </View>
-          </View>
 
-          <View style={styles.squadStats}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>3.4k</Text>
-              <Text style={styles.statLabel}>Total XP</Text>
+            <View style={styles.squadStats}>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{squad.total_xp}</Text>
+                <Text style={styles.statLabel}>Total XP</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{squad.wins}</Text>
+                <Text style={styles.statLabel}>Wins</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>12</Text>
+                <Text style={styles.statLabel}>Active</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>78</Text>
-              <Text style={styles.statLabel}>Wins</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>12</Text>
-              <Text style={styles.statLabel}>Active</Text>
-            </View>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.squadCard, { backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#fff' }}>Join a squad to see stats!</Text>
           </View>
-        </LinearGradient>
+        )}
 
         {/* Squad Moods */}
         <Text style={styles.sectionTitle}>Squad Vibe</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll} contentContainerStyle={{ paddingRight: 20 }}>
           {moods.map((m) => (
-            <View key={m.id} style={[styles.moodCard, { borderColor: m.color }]}>
+            <TouchableOpacity
+              key={m.id}
+              activeOpacity={0.8}
+              onLongPress={() => setFocusedMemberId(m.id)}
+              onPress={() => focusedMemberId === m.id && setFocusedMemberId(null)}
+              style={[
+                styles.moodCard,
+                { borderColor: m.color },
+                focusedMemberId === m.id && styles.focusedCard
+              ]}
+            >
               <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
                 <Ionicons name={m.icon as any} size={24} color={m.color} />
               </View>
               <Text style={styles.moodName}>{m.name}</Text>
               <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
-            </View>
+
+              {focusedMemberId === m.id && (
+                <TouchableOpacity style={styles.pokeButton} onPress={() => handlePoke(m.name)}>
+                  <Text style={styles.pokeText}>Poke 👈</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -268,6 +365,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e293b',
     borderWidth: 1,
     width: 100,
+  },
+  focusedCard: {
+    transform: [{ scale: 1.1 }],
+    zIndex: 10,
+    backgroundColor: '#334155',
+  },
+  pokeButton: {
+    position: 'absolute',
+    bottom: -15,
+    backgroundColor: '#f43f5e',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    elevation: 5,
+    zIndex: 20,
+  },
+  pokeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   moodIconContainer: {
     width: 48,

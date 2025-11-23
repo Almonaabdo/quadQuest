@@ -1,7 +1,9 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { Alert, Dimensions, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,48 +30,51 @@ const categories = [
   { id: 'social', name: 'Social' },
 ];
 
-const goals = [
-  {
-    id: 1,
-    title: 'Run a Marathon',
-    category: 'health',
-    progress: 65,
-    target: 100,
-    unit: '%',
-    deadline: 'Oct 15',
-    status: 'On Track',
-    color: COLORS.secondary,
-  },
-  {
-    id: 2,
-    title: 'Save $10k Emergency Fund',
-    category: 'wealth',
-    progress: 7500,
-    target: 10000,
-    unit: '$',
-    deadline: 'Dec 31',
-    status: 'Ahead',
-    color: COLORS.success,
-  },
-  {
-    id: 3,
-    title: 'Read 24 Books',
-    category: 'wisdom',
-    progress: 18,
-    target: 24,
-    unit: 'bks',
-    deadline: 'Dec 31',
-    status: 'Behind',
-    color: COLORS.warning,
-  },
-];
-
 export default function GoalsScreen() {
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [goals, setGoals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchGoals = async () => {
+    if (!user) return;
+    try {
+      const { data: memberData } = await supabase
+        .from('squad_members')
+        .select('squad_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (memberData) {
+        const { data: goalsData, error } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('squad_id', memberData.squad_id);
+
+        if (error) throw error;
+        setGoals(goalsData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching goals:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGoals();
+  }, [user]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchGoals();
+  };
 
   const filteredGoals = activeCategory === 'all'
     ? goals
-    : goals.filter(g => g.category === activeCategory);
+    : goals.filter(g => g.category?.toLowerCase() === activeCategory);
 
   const renderProgressBar = (progress: number, target: number, color: string) => {
     const percentage = Math.min((progress / target) * 100, 100);
@@ -83,7 +88,11 @@ export default function GoalsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+      >
 
         {/* Header */}
         <View style={styles.header}>
@@ -139,50 +148,54 @@ export default function GoalsScreen() {
 
         {/* Goals List */}
         <View style={styles.goalsList}>
-          {filteredGoals.map((goal, index) => (
-            <Animated.View
-              key={goal.id}
-              entering={FadeInDown.delay(200 + index * 100).springify()}
-              style={styles.goalCard}
-            >
-              <View style={styles.goalHeader}>
-                <View style={styles.goalTitleContainer}>
-                  <View style={[styles.categoryDot, { backgroundColor: goal.color }]} />
-                  <Text style={styles.goalTitle}>{goal.title}</Text>
+          {filteredGoals.length > 0 ? (
+            filteredGoals.map((goal, index) => (
+              <Animated.View
+                key={goal.id}
+                entering={FadeInDown.delay(200 + index * 100).springify()}
+                style={styles.goalCard}
+              >
+                <View style={styles.goalHeader}>
+                  <View style={styles.goalTitleContainer}>
+                    <View style={[styles.categoryDot, { backgroundColor: goal.color }]} />
+                    <Text style={styles.goalTitle}>{goal.title}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: goal.status === 'On Track' || goal.status === 'Ahead' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(251, 191, 36, 0.1)' }]}>
+                    <Text style={[styles.statusText, { color: goal.status === 'On Track' || goal.status === 'Ahead' ? COLORS.success : COLORS.warning }]}>
+                      {goal.status}
+                    </Text>
+                  </View>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: goal.status === 'On Track' || goal.status === 'Ahead' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(251, 191, 36, 0.1)' }]}>
-                  <Text style={[styles.statusText, { color: goal.status === 'On Track' || goal.status === 'Ahead' ? COLORS.success : COLORS.warning }]}>
-                    {goal.status}
-                  </Text>
-                </View>
-              </View>
 
-              <View style={styles.progressSection}>
-                <View style={styles.progressLabels}>
-                  <Text style={styles.progressText}>
-                    {goal.unit === '$' ? `$${goal.progress}` : goal.progress}
-                    {goal.unit !== '$' && goal.unit !== '%' ? ` ${goal.unit}` : ''}
-                    {goal.unit === '%' ? '%' : ''}
-                  </Text>
-                  <Text style={styles.targetText}>
-                    / {goal.unit === '$' ? `$${goal.target}` : goal.target}
-                    {goal.unit === '%' ? '%' : ''}
-                  </Text>
+                <View style={styles.progressSection}>
+                  <View style={styles.progressLabels}>
+                    <Text style={styles.progressText}>
+                      {goal.unit === '$' ? `$${goal.progress}` : goal.progress}
+                      {goal.unit !== '$' && goal.unit !== '%' ? ` ${goal.unit}` : ''}
+                      {goal.unit === '%' ? '%' : ''}
+                    </Text>
+                    <Text style={styles.targetText}>
+                      / {goal.unit === '$' ? `$${goal.target}` : goal.target}
+                      {goal.unit === '%' ? '%' : ''}
+                    </Text>
+                  </View>
+                  {renderProgressBar(goal.progress, goal.target, goal.color)}
                 </View>
-                {renderProgressBar(goal.progress, goal.target, goal.color)}
-              </View>
 
-              <View style={styles.goalFooter}>
-                <View style={styles.deadline}>
-                  <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
-                  <Text style={styles.deadlineText}>{goal.deadline}</Text>
+                <View style={styles.goalFooter}>
+                  <View style={styles.deadline}>
+                    <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
+                    <Text style={styles.deadlineText}>{goal.deadline}</Text>
+                  </View>
+                  <TouchableOpacity>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.muted} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity>
-                  <Ionicons name="chevron-forward" size={20} color={COLORS.muted} />
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          ))}
+              </Animated.View>
+            ))
+          ) : (
+            <Text style={{ color: COLORS.muted, textAlign: 'center', marginTop: 20 }}>No goals found for this category.</Text>
+          )}
         </View>
 
         {/* Focus Area / Visualization Placeholder */}
