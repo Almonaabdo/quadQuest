@@ -3,7 +3,7 @@ import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,28 +33,26 @@ const categories = [
 export default function GoalsScreen() {
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('all');
-  const [goals, setGoals] = useState<any[]>([]);
+  const [personalGoals, setPersonalGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchGoals = async () => {
+  // New Goal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newGoalName, setNewGoalName] = useState('');
+  const [newGoalMax, setNewGoalMax] = useState('');
+
+  const fetchPersonalGoals = async () => {
     if (!user) return;
     try {
-      const { data: memberData } = await supabase
-        .from('squad_members')
-        .select('squad_id')
-        .eq('user_id', user.id)
-        .single();
+      const { data: personalGoalsData, error } = await supabase
+        .from('personal_goals')
+        .select('*')
+        .eq('user_id', user.id);
 
-      if (memberData) {
-        const { data: goalsData, error } = await supabase
-          .from('goals')
-          .select('*')
-          .eq('squad_id', memberData.squad_id);
+      if (error) throw error;
+      setPersonalGoals(personalGoalsData || []);
 
-        if (error) throw error;
-        setGoals(goalsData || []);
-      }
     } catch (error) {
       console.error('Error fetching goals:', error);
     } finally {
@@ -64,23 +62,61 @@ export default function GoalsScreen() {
   };
 
   useEffect(() => {
-    fetchGoals();
+    fetchPersonalGoals();
   }, [user]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchGoals();
+    fetchPersonalGoals();
   };
 
-  const filteredGoals = activeCategory === 'all'
-    ? goals
-    : goals.filter(g => g.category?.toLowerCase() === activeCategory);
+  const handleCreateGoal = async () => {
+    if (!newGoalName.trim() || !newGoalMax.trim()) {
+      return;
+    }
 
-  const renderProgressBar = (progress: number, target: number, color: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_personal_goal', {
+        p_name: newGoalName.trim(),
+        p_max: parseInt(newGoalMax.trim(), 10),
+      });
+
+      if (error) throw error;
+
+      setModalVisible(false);
+      setNewGoalName('');
+      setNewGoalMax('');
+      fetchPersonalGoals();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create goal');
+    }
+  };
+
+  const filteredGoals = activeCategory === 'all' ? personalGoals : personalGoals.filter(g => g.category?.toLowerCase() === activeCategory);
+
+  const renderProgressBar = (progress: number, target: number) => {
     const percentage = Math.min((progress / target) * 100, 100);
+
+    // Determine color based on percentage
+    let barColor = 'red';
+    if (percentage > 80) {
+      barColor = 'green';
+    } else if (percentage > 60) {
+      barColor = 'lightgreen';
+    } else if (percentage > 40) {
+      barColor = 'yellow';
+    } else if (percentage > 20) {
+      barColor = 'orange';
+    }
+
     return (
       <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 8 }]} />
+        <View
+          style={[
+            styles.progressBarFill,
+            { width: `${percentage}%`, backgroundColor: barColor },
+          ]}
+        />
       </View>
     );
   };
@@ -100,7 +136,7 @@ export default function GoalsScreen() {
             <Text style={styles.headerTitle}>Vision Board</Text>
             <Text style={styles.headerSubtitle}>Design your future.</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert('New Goal', 'Open create goal modal')}>
+          <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
             <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -150,38 +186,30 @@ export default function GoalsScreen() {
         <View style={styles.goalsList}>
           {filteredGoals.length > 0 ? (
             filteredGoals.map((goal, index) => (
-              <Animated.View
-                key={goal.id}
-                entering={FadeInDown.delay(200 + index * 100).springify()}
-                style={styles.goalCard}
-              >
+              <Animated.View key={goal.id} entering={FadeInDown.delay(200 + index * 100).springify()} style={styles.goalCard}>
+
+                {/* Goal Header */}
                 <View style={styles.goalHeader}>
                   <View style={styles.goalTitleContainer}>
-                    <View style={[styles.categoryDot, { backgroundColor: goal.color }]} />
-                    <Text style={styles.goalTitle}>{goal.title}</Text>
+                    <Text style={styles.goalTitle}>{goal.name}</Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: goal.status === 'On Track' || goal.status === 'Ahead' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(251, 191, 36, 0.1)' }]}>
-                    <Text style={[styles.statusText, { color: goal.status === 'On Track' || goal.status === 'Ahead' ? COLORS.success : COLORS.warning }]}>
+                  <View style={[styles.statusBadge, { backgroundColor: goal.status === 'Ongoing' || goal.status === 'Ahead' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(251, 191, 36, 0.1)' }]}>
+                    <Text style={[styles.statusText, { color: goal.status === 'Ongoing' || goal.status === 'Ahead' ? COLORS.warning : COLORS.success }]}>
                       {goal.status}
                     </Text>
                   </View>
                 </View>
 
+                {/* Progress Section */}
                 <View style={styles.progressSection}>
                   <View style={styles.progressLabels}>
-                    <Text style={styles.progressText}>
-                      {goal.unit === '$' ? `$${goal.progress}` : goal.progress}
-                      {goal.unit !== '$' && goal.unit !== '%' ? ` ${goal.unit}` : ''}
-                      {goal.unit === '%' ? '%' : ''}
-                    </Text>
-                    <Text style={styles.targetText}>
-                      / {goal.unit === '$' ? `$${goal.target}` : goal.target}
-                      {goal.unit === '%' ? '%' : ''}
-                    </Text>
+                    <Text style={styles.progressText}>{goal.progress}</Text>
+                    <Text style={styles.targetText}>/{goal.max}</Text>
                   </View>
-                  {renderProgressBar(goal.progress, goal.target, goal.color)}
+                  {renderProgressBar(goal.progress, goal.max)}
                 </View>
 
+                {/* Goal Footer */}
                 <View style={styles.goalFooter}>
                   <View style={styles.deadline}>
                     <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
@@ -218,6 +246,49 @@ export default function GoalsScreen() {
         </Animated.View>
 
       </ScrollView>
+
+      {/* Create Goal Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>New Goal</Text>
+            <Text style={styles.modalSubtitle}>Set a new target for yourself</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Goal Name (e.g., Daily Steps)"
+              placeholderTextColor={COLORS.muted}
+              value={newGoalName}
+              onChangeText={setNewGoalName}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Target Value (e.g., 10000)"
+              placeholderTextColor={COLORS.muted}
+              value={newGoalMax}
+              onChangeText={setNewGoalMax}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleCreateGoal}>
+                <Text style={styles.buttonText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -382,7 +453,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#334155',
+    backgroundColor: '#98a7bdff',
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -442,5 +513,67 @@ const styles = StyleSheet.create({
     fontSize: 12,
     width: 40,
     textAlign: 'center',
+  },
+
+
+  // create goal modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: COLORS.card,
+    padding: 24,
+    borderRadius: 24,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.muted,
+    marginBottom: 24,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: COLORS.dark,
+    padding: 16,
+    borderRadius: 12,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: COLORS.border,
+  },
+  confirmButton: {
+    backgroundColor: COLORS.primary,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

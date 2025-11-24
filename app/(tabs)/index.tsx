@@ -18,7 +18,7 @@ export default function Home() {
   // Mood Selection State
   const [myMood, setMyMood] = useState<string | null>(null);
   const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
-  const [squadMembers, setSquadMembers] = useState([]);
+  const [squadMembers, setSquadMembers] = useState<any[]>([]);
 
 
   const MOOD_OPTIONS = [
@@ -82,6 +82,11 @@ export default function Home() {
         .select('*')
         .eq('user_id', user.id);
       setChallenges(challengesData || []);
+
+      // Fetch Squad Members
+      const { data, error } = await supabase.rpc("get_squad_members");
+      if (error) throw error;
+      setSquadMembers(data || []);
 
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to fetch home data');
@@ -202,7 +207,7 @@ export default function Home() {
 
         {/* Squad Card */}
         {squad ? (
-          <LinearGradient colors={['#4c1d95', '#2e1065']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.squadCard}>
+          <LinearGradient colors={['#4c1d95', '#19613aff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.squadCard}>
             <View style={styles.squadHeader}>
               <View>
                 <Text style={styles.squadName}>{squad.name}</Text>
@@ -252,25 +257,21 @@ export default function Home() {
           <>
             <Text style={styles.sectionTitle}>Squad Vibe</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll} contentContainerStyle={{ paddingRight: 20 }}>
-              {moods.map((m) => (
-                <TouchableOpacity
-                  key={m.id}
-                  activeOpacity={0.8}
-                  onLongPress={() => setFocusedMemberId(m.id)}
-                  onPress={() => focusedMemberId === m.id && setFocusedMemberId(null)}
-                  style={[
-                    styles.moodCard,
-                    { borderColor: m.color },
-                    focusedMemberId === m.id && styles.focusedCard
-                  ]}
-                >
-                  <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
-                    <Ionicons name={m.mood as any} size={24} color={m.color} />
+              {squadMembers.map((member) => {
+                const mood = MOOD_OPTIONS.find((opt) => opt.value === member.mood);
+                return (
+
+                  <View key={member.user_id} style={styles.moodCard}>
+                    <View style={[styles.moodIconContainer, { backgroundColor: `${mood?.color}20` }]}>
+                      <Ionicons name={mood?.icon as any} size={20} color={mood?.color} />
+                    </View>
+                    <Text style={styles.moodName}>{member.name}</Text>
+                    <Text style={[styles.moodText, { color: mood?.color || "gray" }]}>
+                      {mood?.value}
+                    </Text>
                   </View>
-                  <Text style={styles.moodName}>{m.name}</Text>
-                  <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
-                </TouchableOpacity>
-              ))}
+                );
+              })}
             </ScrollView>
           </>
         )}
@@ -492,26 +493,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e293b',
     borderWidth: 1,
     width: 100,
-  },
-  focusedCard: {
-    transform: [{ scale: 1.1 }],
-    zIndex: 10,
-    backgroundColor: '#334155',
-  },
-  pokeButton: {
-    position: 'absolute',
-    bottom: -15,
-    backgroundColor: '#f43f5e',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    elevation: 5,
-    zIndex: 20,
-  },
-  pokeText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
   },
   moodIconContainer: {
     width: 48,
