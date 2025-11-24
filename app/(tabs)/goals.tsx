@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: '25%'
   },
   header: {
     flexDirection: 'row',

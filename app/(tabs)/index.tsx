@@ -15,6 +15,18 @@ export default function Home() {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [squadIdInput, setSquadIdInput] = useState('');
 
+  // Mood Selection State
+  const [myMood, setMyMood] = useState<string | null>(null);
+  const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
+  const [squadMembers, setSquadMembers] = useState([]);
+
+
+  const MOOD_OPTIONS = [
+    { value: 'happy', icon: 'happy', color: '#fde047' },
+    { value: 'sad', icon: 'sad', color: '#f97316' },
+    { value: 'thumbs-down', icon: 'thumbs-down', color: '#8b5cf6' },
+  ];
+
   const [moods, setMoods] = useState<any[]>([]);
   const [challenges, setChallenges] = useState<any[]>([]);
   const [leader, setLeader] = useState<any>(null);
@@ -34,9 +46,9 @@ export default function Home() {
       if (profileError) throw profileError;
       setLeader({
         name: profileData.username || profileData.full_name || 'User',
-        xp: profileData.xp || 0,
-        avatar: profileData.avatar_url || 'https://i.redd.it/l7luysouw2z41.jpg',
+        mood: profileData.mood,
       });
+      setMyMood(profileData.mood);
 
       // Fetch Squad & Goals
       const { data: memberData } = await supabase
@@ -59,25 +71,9 @@ export default function Home() {
           .eq('squad_id', memberData.squad_id);
         setGoals(goalsData || []);
 
-        // Fetch Moods
-        const { data: moodsData } = await supabase
-          .from('moods')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .limit(5);
-
-        const formattedMoods = moodsData?.map((m: any) => ({
-          id: m.id,
-          name: 'Member', // Placeholder
-          mood: m.mood,
-          icon: m.icon,
-          color: m.color
-        })) || [];
-        setMoods(formattedMoods);
       } else {
         setSquad(null);
         setGoals([]);
-        setMoods([]);
       }
 
       // Fetch Challenges
@@ -102,11 +98,6 @@ export default function Home() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
-  };
-
-  const handlePoke = (name: string) => {
-    Alert.alert('Poke!', `You poked ${name}!`);
-    setFocusedMemberId(null);
   };
 
   const handleJoinSquad = async () => {
@@ -139,6 +130,18 @@ export default function Home() {
     }
   };
 
+  const handleMoodUpdate = async (mood: string) => {
+    try {
+      const { error } = await supabase.rpc('update_mood', {
+        new_mood: mood,
+      });
+      if (error) throw error;
+      fetchData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update mood');
+    }
+  };
+
   const renderProgressBar = (progress: number, target: number, color: string) => {
     const percentage = Math.min((progress / target) * 100, 100);
     return (
@@ -162,6 +165,37 @@ export default function Home() {
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.username}>{leader?.name || 'Loading...'}</Text>
+            <View style={{ marginTop: 8 }}>
+              <TouchableOpacity
+                onPress={() => setIsMoodPickerOpen(!isMoodPickerOpen)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' }}
+              >
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600' }}>Feeling:</Text>
+
+                <Ionicons name={MOOD_OPTIONS.find(m => m.value === myMood)?.icon as any} size={16} color={MOOD_OPTIONS.find(m => m.value === myMood)?.color} />
+                <Ionicons name={isMoodPickerOpen ? "chevron-up" : "chevron-down"} size={12} color="#94a3b8" />
+              </TouchableOpacity>
+
+              {isMoodPickerOpen && (
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  {MOOD_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => handleMoodUpdate(option.value)}
+                      style={{
+                        backgroundColor: myMood === option.value ? `${option.color}20` : 'rgba(255,255,255,0.05)',
+                        padding: 6,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: myMood === option.value ? option.color : 'transparent'
+                      }}
+                    >
+                      <Ionicons name={option.icon as any} size={20} color={option.color} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
           <Image source={{ uri: leader?.avatar || 'https://i.redd.it/l7luysouw2z41.jpg' }} style={styles.headerAvatar} />
         </View>
@@ -231,16 +265,10 @@ export default function Home() {
                   ]}
                 >
                   <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
-                    <Ionicons name={m.icon as any} size={24} color={m.color} />
+                    <Ionicons name={m.mood as any} size={24} color={m.color} />
                   </View>
                   <Text style={styles.moodName}>{m.name}</Text>
                   <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
-
-                  {focusedMemberId === m.id && (
-                    <TouchableOpacity style={styles.pokeButton} onPress={() => handlePoke(m.name)}>
-                      <Text style={styles.pokeText}>Poke 👈</Text>
-                    </TouchableOpacity>
-                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
