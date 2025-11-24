@@ -3,7 +3,7 @@ import { supabase } from '@/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
@@ -12,6 +12,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [focusedMemberId, setFocusedMemberId] = useState<number | null>(null);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [squadIdInput, setSquadIdInput] = useState('');
 
   const [moods, setMoods] = useState<any[]>([]);
   const [challenges, setChallenges] = useState<any[]>([]);
@@ -72,6 +74,10 @@ export default function Home() {
           color: m.color
         })) || [];
         setMoods(formattedMoods);
+      } else {
+        setSquad(null);
+        setGoals([]);
+        setMoods([]);
       }
 
       // Fetch Challenges
@@ -81,8 +87,8 @@ export default function Home() {
         .eq('user_id', user.id);
       setChallenges(challengesData || []);
 
-    } catch (error) {
-      console.error('Error fetching home data:', error);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to fetch home data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -101,6 +107,36 @@ export default function Home() {
   const handlePoke = (name: string) => {
     Alert.alert('Poke!', `You poked ${name}!`);
     setFocusedMemberId(null);
+  };
+
+  const handleJoinSquad = async () => {
+    if (!squadIdInput.trim()) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('join_squad', {
+        squad_id: squadIdInput.trim(),
+      });
+
+      if (error) throw error;
+
+      setJoinModalVisible(false);
+      setSquadIdInput('');
+      fetchData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to join squad');
+    }
+  };
+
+  const handleLeaveSquad = async () => {
+    try {
+      const { error } = await supabase.rpc('leave_squad', {});
+      if (error) throw error;
+      fetchData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to leave squad');
+    }
   };
 
   const renderProgressBar = (progress: number, target: number, color: string) => {
@@ -159,83 +195,146 @@ export default function Home() {
                 <Text style={styles.statLabel}>Active</Text>
               </View>
             </View>
+            <View style={styles.squadActions}>
+              <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveSquad}>
+                <Text style={styles.leaveButtonText}>Leave Squad</Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
         ) : (
-          <View style={[styles.squadCard, { backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: '#fff' }}>Join a squad to see stats!</Text>
+          <View style={[styles.squadCard, { backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', gap: 16 }]}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Join a squad to see stats!</Text>
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={() => setJoinModalVisible(true)}
+            >
+              <Text style={styles.joinButtonText}>Join Squad</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {/* Squad Moods */}
-        <Text style={styles.sectionTitle}>Squad Vibe</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll} contentContainerStyle={{ paddingRight: 20 }}>
-          {moods.map((m) => (
-            <TouchableOpacity
-              key={m.id}
-              activeOpacity={0.8}
-              onLongPress={() => setFocusedMemberId(m.id)}
-              onPress={() => focusedMemberId === m.id && setFocusedMemberId(null)}
-              style={[
-                styles.moodCard,
-                { borderColor: m.color },
-                focusedMemberId === m.id && styles.focusedCard
-              ]}
-            >
-              <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
-                <Ionicons name={m.icon as any} size={24} color={m.color} />
-              </View>
-              <Text style={styles.moodName}>{m.name}</Text>
-              <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
+        {squad && (
+          <>
+            <Text style={styles.sectionTitle}>Squad Vibe</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll} contentContainerStyle={{ paddingRight: 20 }}>
+              {moods.map((m) => (
+                <TouchableOpacity
+                  key={m.id}
+                  activeOpacity={0.8}
+                  onLongPress={() => setFocusedMemberId(m.id)}
+                  onPress={() => focusedMemberId === m.id && setFocusedMemberId(null)}
+                  style={[
+                    styles.moodCard,
+                    { borderColor: m.color },
+                    focusedMemberId === m.id && styles.focusedCard
+                  ]}
+                >
+                  <View style={[styles.moodIconContainer, { backgroundColor: `${m.color}20` }]}>
+                    <Ionicons name={m.icon as any} size={24} color={m.color} />
+                  </View>
+                  <Text style={styles.moodName}>{m.name}</Text>
+                  <Text style={[styles.moodText, { color: m.color }]}>{m.mood}</Text>
 
-              {focusedMemberId === m.id && (
-                <TouchableOpacity style={styles.pokeButton} onPress={() => handlePoke(m.name)}>
-                  <Text style={styles.pokeText}>Poke 👈</Text>
+                  {focusedMemberId === m.id && (
+                    <TouchableOpacity style={styles.pokeButton} onPress={() => handlePoke(m.name)}>
+                      <Text style={styles.pokeText}>Poke 👈</Text>
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Squad Goals */}
-        <Text style={styles.sectionTitle}>Squad Goals</Text>
-        {goals.map((g) => (
-          <View key={g.id} style={styles.goalCard}>
-            <View style={styles.goalHeader}>
-              <Text style={styles.goalTitle}>{g.title}</Text>
-              <Text style={styles.goalProgressText}>{Math.round((g.progress / g.target) * 100)}%</Text>
-            </View>
-            {renderProgressBar(g.progress, g.target, g.color)}
-            <Text style={styles.goalStats}>{g.progress} / {g.target}</Text>
-          </View>
-        ))}
+        {squad && (
+          <>
+            <Text style={styles.sectionTitle}>Squad Goals</Text>
+            {goals.map((g) => (
+              <View key={g.id} style={styles.goalCard}>
+                <View style={styles.goalHeader}>
+                  <Text style={styles.goalTitle}>{g.title}</Text>
+                  <Text style={styles.goalProgressText}>{Math.round((g.progress / g.target) * 100)}%</Text>
+                </View>
+                {renderProgressBar(g.progress, g.target, g.color)}
+                <Text style={styles.goalStats}>{g.progress} / {g.target}</Text>
+              </View>
+            ))}
+          </>
+        )}
 
         {/* Daily Challenges */}
-        <Text style={styles.sectionTitle}>Today’s Quests</Text>
-        {challenges.map((c) => (
-          <TouchableOpacity key={c.id} activeOpacity={0.7}>
-            <LinearGradient
-              colors={['#1e293b', '#0f172a']}
-              style={styles.challengeCard}
-            >
-              <View style={styles.challengeIcon}>
-                <Ionicons name={c.category === 'Fitness' ? 'fitness' : c.category === 'Health' ? 'water' : 'leaf'} size={24} color="#fff" />
-              </View>
-              <View style={styles.challengeContent}>
-                <Text style={styles.challengeTitle}>{c.title}</Text>
-                <Text style={styles.challengeXP}>+{c.xp} XP</Text>
-              </View>
-              {c.completed ? (
-                <View style={styles.completedBadge}>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                </View>
-              ) : (
-                <View style={styles.incompleteBadge} />
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        ))}
-
+        {squad && (
+          <>
+            <Text style={styles.sectionTitle}>Today’s Quests</Text>
+            {challenges.map((c) => (
+              <TouchableOpacity key={c.id} activeOpacity={0.7}>
+                <LinearGradient
+                  colors={['#1e293b', '#0f172a']}
+                  style={styles.challengeCard}
+                >
+                  <View style={styles.challengeIcon}>
+                    <Ionicons name={c.category === 'Fitness' ? 'fitness' : c.category === 'Health' ? 'water' : 'leaf'} size={24} color="#fff" />
+                  </View>
+                  <View style={styles.challengeContent}>
+                    <Text style={styles.challengeTitle}>{c.title}</Text>
+                    <Text style={styles.challengeXP}>+{c.xp} XP</Text>
+                  </View>
+                  {c.completed ? (
+                    <View style={styles.completedBadge}>
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    </View>
+                  ) : (
+                    <View style={styles.incompleteBadge} />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
       </ScrollView>
+
+      {/* Join Squad Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={joinModalVisible}
+        onRequestClose={() => setJoinModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Join a Squad</Text>
+            <Text style={styles.modalSubtitle}>Enter the Squad ID to join</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Squad ID"
+              placeholderTextColor="#94a3b8"
+              value={squadIdInput}
+              onChangeText={setSquadIdInput}
+              autoCapitalize="none"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setJoinModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleJoinSquad}
+              >
+                <Text style={styles.buttonText}>Join</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -487,5 +586,91 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: '#475569',
+  },
+  joinButton: {
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  joinButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    padding: 24,
+    borderRadius: 24,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 24,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#0f172a',
+    padding: 16,
+    borderRadius: 12,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#334155',
+  },
+  confirmButton: {
+    backgroundColor: '#8b5cf6',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  squadActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  leaveButton: {
+    backgroundColor: '#f43f5e',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  leaveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
