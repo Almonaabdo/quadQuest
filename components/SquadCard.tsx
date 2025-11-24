@@ -1,14 +1,16 @@
+import { Text } from '@/components/Themed';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SquadCardProps {
     squad: any;
     onJoinPress: () => void;
     onLeavePress: () => void;
+    onChatPress: () => void;
 }
 
-export default function SquadCard({ squad, onJoinPress, onLeavePress }: SquadCardProps) {
+export default function SquadCard({ squad, onJoinPress, onLeavePress, onChatPress }: SquadCardProps) {
     if (!squad) {
         return (
             <View style={[styles.squadCard, { backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', gap: 16 }]}>
@@ -52,6 +54,9 @@ export default function SquadCard({ squad, onJoinPress, onLeavePress }: SquadCar
                 </View>
             </View>
             <View style={styles.squadActions}>
+                <TouchableOpacity style={styles.chatButton} onPress={onChatPress}>
+                    <Text style={styles.chatButtonText}>Chat</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.leaveButton} onPress={onLeavePress}>
                     <Text style={styles.leaveButtonText}>Leave Squad</Text>
                 </TouchableOpacity>
@@ -150,6 +155,18 @@ const styles = StyleSheet.create({
     },
     joinButtonText: {
         color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    chatButton: {
+        flex: 1,
+        backgroundColor: '#3b82f6',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    chatButtonText: {
         fontWeight: 'bold',
         fontSize: 16,
     },

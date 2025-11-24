@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ChatModal from '../../components/ChatModal';
 import SquadCard from '../../components/SquadCard';
 
 export default function Home() {
@@ -14,6 +15,7 @@ export default function Home() {
 
   const [focusedMemberId, setFocusedMemberId] = useState<number | null>(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [chatModalVisible, setChatModalVisible] = useState(false);
   const [squadIdInput, setSquadIdInput] = useState('');
 
   // Mood Selection State
@@ -209,7 +211,12 @@ export default function Home() {
         </View>
 
         {/* Squad Card */}
-        <SquadCard squad={squad} onJoinPress={() => setJoinModalVisible(true)} onLeavePress={handleLeaveSquad} />
+        <SquadCard
+          squad={squad}
+          onJoinPress={() => setJoinModalVisible(true)}
+          onLeavePress={handleLeaveSquad}
+          onChatPress={() => setChatModalVisible(true)}
+        />
 
         {/* Squad Moods */}
         {squad && (
@@ -322,6 +329,9 @@ export default function Home() {
           </View>
         </View>
       </Modal>
+
+      {/* Chat Modal */}
+      <ChatModal visible={chatModalVisible} onClose={() => setChatModalVisible(false)} squadId={squad?.id} />
 
     </SafeAreaView>
   );

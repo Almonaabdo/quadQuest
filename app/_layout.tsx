@@ -6,6 +6,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -49,7 +50,9 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider><RootLayoutNav /></AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider><RootLayoutNav /></AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 
